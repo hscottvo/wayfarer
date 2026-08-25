@@ -1,6 +1,7 @@
+mod util;
 use eyre::Result;
 use tracing::{info, instrument};
-use wayfarer::util::setup_env;
+use util::setup_env;
 
 fn main() -> Result<()> {
     setup_env()?;

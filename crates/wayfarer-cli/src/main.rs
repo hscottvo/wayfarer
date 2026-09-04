@@ -8,6 +8,7 @@ fn main() -> Result<()> {
     setup_env()?;
     bar(5);
     let config = Configuration::load_xdg()?;
+    println!("{:?}", config);
     Ok(())
 }
 

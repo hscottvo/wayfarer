@@ -22,7 +22,6 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
-        dbg!(path.as_ref());
         let settings = Config::builder()
             .add_source(config::File::from(path.as_ref()).format(FileFormat::Toml))
             // .add_source(config::Environment::with_prefix("APP"))
@@ -35,21 +34,17 @@ impl Configuration {
     }
 
     pub fn save(&self, path: &ConfigurationDirectory) -> Result<PathBuf> {
-        dbg!(&path);
         let parent_path = path
             .as_ref()
             .parent()
             .ok_or_else(|| ConfigurationError::Parent(path.to_path_buf()))?;
-        dbg!(&parent_path);
         fs::create_dir_all(parent_path)?;
         let mut file = NamedTempFile::new_in(parent_path)?;
         let contents = toml::to_string_pretty(self)?;
-        dbg!(&contents);
         file.write_all(contents.as_bytes())?;
         file.flush()?;
         file.as_file().sync_all()?;
         let write_path = parent_path.join("config.toml");
-        dbg!(&write_path);
         file.persist(&write_path)
             .map_err(|_| ConfigurationError::ConfigWrite(write_path))?;
         Ok("".into())
@@ -111,36 +106,7 @@ mod tests {
         expected.save(&dir)?;
 
         let config = Configuration::load(dir)?;
-        dbg!(&path);
-        dbg!(&config);
         assert_eq!(expected, config);
         Ok(())
     }
-
-    #[test]
-    fn missing_xdg_config_path() -> Result<()> {
-        let result = xdg_config_path();
-
-        Ok(())
-    }
-
-    // #[test]
-    // fn what() -> Result<()> {
-    //     let config = Configuration::load_xdg_configuration();
-    //     dbg!(config);
-    //     Ok(())
-    // }
-
-    // #[test]
-    // fn missing_file_returns_error() {
-    //     let result = read_configuration();
-    //     assert!(matches!(result, Err(ConfigurationError::Io(_)),));
-    // }
-    //
-    // #[test]
-    // fn bad_toml_returns_error() {
-    //     let invalid_toml = r#"name = "unterminated"#;
-    //     let result = Configuration::from_str(invalid_toml);
-    //     assert!(matches!(result, Err(ConfigurationError::Parse(_)),));
-    // }
 }

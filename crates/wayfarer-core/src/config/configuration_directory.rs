@@ -10,11 +10,9 @@ pub struct ConfigurationDirectory(PathBuf);
 
 impl ConfigurationDirectory {
     pub fn try_new() -> Result<Self> {
-        // let x = PathBuf::from_str(env::var("XDG_CONFIG_HOME")?)?;
-        // let x = PathBuf::from("iserntiern");
-        let x = PathBuf::from(&env::var("XDG_CONFIG_HOME")?).join("wayfarer");
-        dbg!(x);
-        Ok(Self("".into()))
+        Ok(Self(
+            PathBuf::from(&env::var("XDG_CONFIG_HOME")?).join("wayfarer"),
+        ))
     }
 
     #[cfg(test)]

@@ -43,6 +43,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Format
+        env:
+          RUSTC_WRAPPER: sccache
+          SCCACHE_GHA_ENABLED: "true"
+        run: cargo fmt --check
+
       - name: Lint
         env:
           RUSTC_WRAPPER: sccache

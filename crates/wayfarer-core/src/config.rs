@@ -15,12 +15,17 @@ mod base_directory;
 mod configuration_directory;
 pub mod error;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 pub struct Configuration {
     base_directory: BaseDirectory,
 }
 
 impl Configuration {
+    /// # Errors
+    ///
+    /// Will return `Err` if `path` does not exist, the user does not have
+    /// permission to read it, or the file cannot be parsed into a valid
+    /// `Configuration`.
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
         let settings = Config::builder()
             .add_source(config::File::from(path.as_ref()).format(FileFormat::Toml))
@@ -29,10 +34,17 @@ impl Configuration {
         Ok(settings.try_deserialize()?)
     }
 
+    /// # Errors
+    ///
+    /// Will return `Err` if the the user's `XDG_CONFIG_HOME` is not set,
+    /// the directory does not exist, or the file cannot be parsed.
     pub fn load_xdg() -> Result<Self> {
         Self::load(&xdg_config_path()?)
     }
 
+    /// # Errors
+    ///
+    /// Will return `Err` if fails to write to the configuration file.
     pub fn save(&self, path: &ConfigurationDirectory) -> Result<PathBuf> {
         let parent_path = path
             .as_ref()
@@ -46,8 +58,8 @@ impl Configuration {
         file.as_file().sync_all()?;
         let write_path = parent_path.join("config.toml");
         file.persist(&write_path)
-            .map_err(|_| ConfigurationError::ConfigWrite(write_path))?;
-        Ok("".into())
+            .map_err(|_| ConfigurationError::ConfigWrite(write_path.clone()))?;
+        Ok(write_path)
     }
 }
 
@@ -77,10 +89,10 @@ mod tests {
 
     use super::*;
     use tempfile::tempdir;
-    fn test_configuration() -> Configuration {
+    fn test_configuration() -> Result<Configuration> {
         let path = PathBuf::from_str("./").unwrap();
-        let base_directory = BaseDirectory::try_from(path).unwrap();
-        Configuration { base_directory }
+        let base_directory = BaseDirectory::try_from(path)?;
+        Ok(Configuration { base_directory })
     }
 
     #[test]
@@ -101,11 +113,11 @@ mod tests {
     #[test]
     fn read_toml_from_dir() -> Result<()> {
         let path: PathBuf = tempdir()?.path().join("config.toml");
-        let dir = unsafe { ConfigurationDirectory::new(path.clone()) };
-        let expected = test_configuration();
-        expected.save(&dir)?;
+        let dir = unsafe { ConfigurationDirectory::new(path) };
+        let expected = test_configuration()?;
+        let saved_dir = expected.save(&dir)?;
 
-        let config = Configuration::load(dir)?;
+        let config = Configuration::load(saved_dir)?;
         assert_eq!(expected, config);
         Ok(())
     }

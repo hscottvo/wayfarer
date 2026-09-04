@@ -5,7 +5,7 @@ use std::{
 
 use crate::config::error::Result;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, Eq, PartialOrd)]
 pub struct ConfigurationDirectory(PathBuf);
 
 impl ConfigurationDirectory {
@@ -16,7 +16,7 @@ impl ConfigurationDirectory {
     }
 
     #[cfg(test)]
-    pub unsafe fn new(path: PathBuf) -> Self {
+    pub const unsafe fn new(path: PathBuf) -> Self {
         Self(path)
     }
 
@@ -28,15 +28,5 @@ impl ConfigurationDirectory {
 impl AsRef<Path> for ConfigurationDirectory {
     fn as_ref(&self) -> &Path {
         &self.0
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn bruh() -> Result<()> {
-        let x = ConfigurationDirectory::try_new()?;
-        Ok(())
     }
 }

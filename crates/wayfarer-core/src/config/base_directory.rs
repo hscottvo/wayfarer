@@ -6,7 +6,7 @@ use crate::config::{ConfigurationError, Result};
 
 use super::expand_tilde;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Serialize, Deserialize)]
 #[serde(try_from = "PathBuf")]
 pub struct BaseDirectory(PathBuf);
 

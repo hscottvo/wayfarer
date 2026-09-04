@@ -89,10 +89,10 @@ mod tests {
 
     use super::*;
     use tempfile::tempdir;
-    fn test_configuration() -> Configuration {
+    fn test_configuration() -> Result<Configuration> {
         let path = PathBuf::from_str("./").unwrap();
-        let base_directory = BaseDirectory::try_from(path).unwrap();
-        Configuration { base_directory }
+        let base_directory = BaseDirectory::try_from(path)?;
+        Ok(Configuration { base_directory })
     }
 
     #[test]
@@ -114,7 +114,7 @@ mod tests {
     fn read_toml_from_dir() -> Result<()> {
         let path: PathBuf = tempdir()?.path().join("config.toml");
         let dir = unsafe { ConfigurationDirectory::new(path) };
-        let expected = test_configuration();
+        let expected = test_configuration()?;
         let saved_dir = expected.save(&dir)?;
 
         let config = Configuration::load(saved_dir)?;

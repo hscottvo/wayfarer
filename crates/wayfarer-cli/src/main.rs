@@ -2,10 +2,13 @@ mod util;
 use eyre::Result;
 use tracing::{info, instrument};
 use util::setup_env;
+use wayfarer_core::config::Configuration;
 
 fn main() -> Result<()> {
     setup_env()?;
     bar(5);
+    let config = Configuration::load_xdg()?;
+    println!("{:?}", config);
     Ok(())
 }
 

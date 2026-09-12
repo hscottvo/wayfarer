@@ -11,7 +11,6 @@ fn main() -> Result<()> {
     println!("{config:?}");
     let repos = git_repos(config.base_directory())?;
     println!("{repos:?}");
-    println!("briuh");
     Ok(())
 }
 

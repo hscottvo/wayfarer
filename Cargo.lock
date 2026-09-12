@@ -869,7 +869,6 @@ version = "0.1.0"
 dependencies = [
  "config",
  "dirs",
- "eyre",
  "serde",
  "tempfile",
  "thiserror",

@@ -11,7 +11,7 @@ use tempfile::NamedTempFile;
 
 use crate::config::configuration_directory::ConfigurationDirectory;
 
-pub mod base_directory;
+mod base_directory;
 mod configuration_directory;
 pub mod error;
 
@@ -60,11 +60,6 @@ impl Configuration {
         file.persist(&write_path)
             .map_err(|_| ConfigurationError::ConfigWrite(write_path.clone()))?;
         Ok(write_path)
-    }
-
-    #[must_use]
-    pub const fn base_directory(&self) -> &BaseDirectory {
-        &self.base_directory
     }
 }
 

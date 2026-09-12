@@ -1,6 +1,7 @@
 name: CI
 on:
   pull_request:
+    types: [opened, reopened, synchronize]
     branches:
       - main
   push:
@@ -15,16 +16,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Filter Changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            rust:
+              - '**.rs'
+              - '**/Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'rust-toolchain'
+
       - name: Setup Rust toolchain
+        if: steps.filter.outputs.rust == 'true'
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
 
       - name: Install nextest
+        if: steps.filter.outputs.rust == 'true'
         uses: taiki-e/install-action@nextest
 
       - name: Setup sccache
+        if: steps.filter.outputs.rust == 'true'
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.14.0"
@@ -33,6 +49,7 @@ jobs:
           RUSTC_WRAPPER: "sccache"
 
       - name: Restore cargo & target cache
+        if: steps.filter.outputs.rust == 'true'
         uses: actions/cache@v4
         with:
           path: |
@@ -44,28 +61,33 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Format
+        if: steps.filter.outputs.rust == 'true'
         env:
           RUSTC_WRAPPER: sccache
           SCCACHE_GHA_ENABLED: "true"
         run: cargo fmt --check
 
       - name: Lint
+        if: steps.filter.outputs.rust == 'true'
         env:
           RUSTC_WRAPPER: sccache
           SCCACHE_GHA_ENABLED: "true"
         run: cargo clippy
 
-      - name: Build (release)
+      - name: Build
+        if: steps.filter.outputs.rust == 'true'
         env:
           RUSTC_WRAPPER: sccache
           SCCACHE_GHA_ENABLED: "true"
         run: cargo build --release
 
-      - name: Run tests (reuse release artifacts)
+      - name: Run tests
+        if: steps.filter.outputs.rust == 'true'
         env:
           RUSTC_WRAPPER: sccache
           SCCACHE_GHA_ENABLED: "true"
         run: cargo nextest run --release --workspace --all-features
 
       - name: sccache stats
+        if: steps.filter.outputs.rust == 'true'
         run: sccache --show-stats || true

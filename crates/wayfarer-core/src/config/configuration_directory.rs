@@ -19,10 +19,6 @@ impl ConfigurationDirectory {
     pub const unsafe fn new(path: PathBuf) -> Self {
         Self(path)
     }
-
-    pub fn to_path_buf(&self) -> PathBuf {
-        self.0.clone()
-    }
 }
 
 impl AsRef<Path> for ConfigurationDirectory {

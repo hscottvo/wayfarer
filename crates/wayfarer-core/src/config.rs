@@ -39,27 +39,48 @@ impl Configuration {
     /// Will return `Err` if the the user's `XDG_CONFIG_HOME` is not set,
     /// the directory does not exist, or the file cannot be parsed.
     pub fn load_xdg() -> Result<Self> {
-        Self::load(&xdg_config_path()?)
+        Self::load(
+            ConfigurationDirectory::try_new()?
+                .as_ref()
+                .join("config.toml"),
+        )
     }
 
     /// # Errors
     ///
     /// Will return `Err` if fails to write to the configuration file.
-    pub fn save(&self, path: &ConfigurationDirectory) -> Result<PathBuf> {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<PathBuf> {
+        let path = path.as_ref();
+
         let parent_path = path
-            .as_ref()
             .parent()
             .ok_or_else(|| ConfigurationError::Parent(path.to_path_buf()))?;
+
         fs::create_dir_all(parent_path)?;
+
         let mut file = NamedTempFile::new_in(parent_path)?;
         let contents = toml::to_string_pretty(self)?;
+
         file.write_all(contents.as_bytes())?;
         file.flush()?;
         file.as_file().sync_all()?;
-        let write_path = parent_path.join("config.toml");
-        file.persist(&write_path)
-            .map_err(|_| ConfigurationError::ConfigWrite(write_path.clone()))?;
-        Ok(write_path)
+
+        file.persist(path)
+            .map_err(|_| ConfigurationError::ConfigWrite(path.to_path_buf()))?;
+
+        Ok(path.to_path_buf())
+    }
+
+    /// # Errors
+    ///
+    /// Will return `Err` if the the user's `XDG_CONFIG_HOME` is not set,
+    /// the directory does not exist, or the file cannot be written.
+    pub fn save_xdg(&self) -> Result<PathBuf> {
+        self.save(
+            ConfigurationDirectory::try_new()?
+                .as_ref()
+                .join("config.toml"),
+        )
     }
 
     #[must_use]
@@ -79,12 +100,6 @@ fn expand_tilde(path: impl AsRef<Path>) -> Result<PathBuf> {
         path.to_path_buf()
     };
     Ok(path)
-}
-
-fn xdg_config_path() -> Result<PathBuf> {
-    Ok(ConfigurationDirectory::try_new()?
-        .as_ref()
-        .join("config.toml"))
 }
 
 #[cfg(test)]

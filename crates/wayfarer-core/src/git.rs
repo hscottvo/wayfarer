@@ -28,7 +28,7 @@ fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
 
 /// # Errors
 ///
-/// Will return `Err` if rust is unable to spawn the child `git` process
+/// Will return `Err` if rust is unable to read the directory or spawn the child `git` process
 /// that is used to check if a directory is a git repo
 pub fn git_repos(dir: impl AsRef<Path>) -> Result<Vec<GitRepo>> {
     let mut repos = Vec::new();
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn returns_only_git_dirs() -> Result<()> {
+    fn returns_only_git_repos() -> Result<()> {
         let dir = tempdir()?;
         let a_path = dir.path().join("a");
         Command::new("git").arg("init").arg(&a_path).output()?;

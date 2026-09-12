@@ -20,7 +20,8 @@ fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
         .arg(dir.as_ref())
         .arg("rev-parse")
         .arg("--git-dir")
-        .status()?
+        .output()?
+        .status
         .success();
     Ok(ret)
 }
@@ -52,7 +53,7 @@ mod tests {
     #[test]
     fn returns_true_for_git_dir() -> Result<()> {
         let dir = tempdir()?;
-        Command::new("git").arg("init").arg(dir.path()).status()?;
+        Command::new("git").arg("init").arg(dir.path()).output()?;
         assert!(is_git_repo(dir)?);
         Ok(())
     }
@@ -76,13 +77,13 @@ mod tests {
     fn returns_only_git_dirs() -> Result<()> {
         let dir = tempdir()?;
         let a_path = dir.path().join("a");
-        Command::new("git").arg("init").arg(&a_path).status()?;
+        Command::new("git").arg("init").arg(&a_path).output()?;
 
         let b_path = dir.path().join("b");
-        Command::new("git").arg("init").arg(&b_path).status()?;
+        Command::new("git").arg("init").arg(&b_path).output()?;
 
         let c_path = dir.path().join("c");
-        Command::new("git").arg("init").arg(&c_path).status()?;
+        Command::new("git").arg("init").arg(&c_path).output()?;
 
         fs::create_dir(dir.path().join("d"))?;
         fs::create_dir(dir.path().join("e"))?;
@@ -98,7 +99,6 @@ mod tests {
             ],
             repos
         );
-        dbg!(repos);
 
         Ok(())
     }

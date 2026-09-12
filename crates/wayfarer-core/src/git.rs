@@ -48,24 +48,58 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
     #[test]
-    fn valid_git_repo() -> Result<()> {
+    fn returns_true_for_git_dir() -> Result<()> {
         let dir = tempdir()?;
         Command::new("git").arg("init").arg(dir.path()).status()?;
         assert!(is_git_repo(dir)?);
         Ok(())
     }
+
     #[test]
-    fn missing_dot_git() -> Result<()> {
+    fn returns_false_for_empty_dir() -> Result<()> {
         let dir = tempdir()?;
         assert!(!is_git_repo(dir)?);
         Ok(())
     }
+
     #[test]
-    fn bad_dot_git() -> Result<()> {
+    fn returns_false_for_fake_git_dir() -> Result<()> {
         let dir = tempdir()?;
         fs::create_dir(dir.path().join(".git"))?;
         assert!(!is_git_repo(dir)?);
+        Ok(())
+    }
+
+    #[test]
+    fn returns_only_git_dirs() -> Result<()> {
+        let dir = tempdir()?;
+        let a_path = dir.path().join("a");
+        Command::new("git").arg("init").arg(&a_path).status()?;
+
+        let b_path = dir.path().join("b");
+        Command::new("git").arg("init").arg(&b_path).status()?;
+
+        let c_path = dir.path().join("c");
+        Command::new("git").arg("init").arg(&c_path).status()?;
+
+        fs::create_dir(dir.path().join("d"))?;
+        fs::create_dir(dir.path().join("e"))?;
+
+        let mut repos = git_repos(dir)?;
+        repos.sort();
+
+        assert_eq!(
+            vec![
+                GitRepo::new(a_path),
+                GitRepo::new(b_path),
+                GitRepo::new(c_path)
+            ],
+            repos
+        );
+        dbg!(repos);
+
         Ok(())
     }
 }

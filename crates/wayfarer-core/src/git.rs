@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -16,6 +17,11 @@ impl GitRepo {
             return Err(Error::NotAGitRepo(path));
         }
         Ok(Self(path))
+    }
+}
+impl Display for GitRepo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.display().fmt(f)
     }
 }
 

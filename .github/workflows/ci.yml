@@ -72,7 +72,7 @@ jobs:
         env:
           RUSTC_WRAPPER: sccache
           SCCACHE_GHA_ENABLED: "true"
-        run: cargo clippy
+        run: cargo clippy -- -D warnings
 
       - name: Build
         if: steps.filter.outputs.rust == 'true'

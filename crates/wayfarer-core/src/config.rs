@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 use crate::config::configuration_directory::ConfigurationDirectory;
 

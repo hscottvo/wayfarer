@@ -5,6 +5,7 @@ use std::{
 };
 pub mod error;
 use error::Result;
+use tracing::instrument;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRepo(PathBuf);
@@ -30,6 +31,7 @@ fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
 ///
 /// Will return `Err` if rust is unable to read the directory or spawn the child `git` process
 /// that is used to check if a directory is a git repo
+#[instrument(skip(dir), fields(dir = ?dir.as_ref()))]
 pub fn git_repos(dir: impl AsRef<Path>) -> Result<Vec<GitRepo>> {
     let mut repos = Vec::new();
     for dir in fs::read_dir(dir.as_ref())? {

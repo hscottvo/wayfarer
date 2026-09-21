@@ -8,6 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::NamedTempFile;
+use tracing::{debug, instrument};
 
 use crate::config::configuration_directory::ConfigurationDirectory;
 
@@ -26,6 +27,7 @@ impl Configuration {
     /// Will return `Err` if `path` does not exist, the user does not have
     /// permission to read it, or the file cannot be parsed into a valid
     /// `Configuration`.
+    #[instrument(skip(path), fields(path = ?path.as_ref()))]
     pub fn load(path: impl AsRef<Path>) -> Result<Self> {
         let settings = Config::builder()
             .add_source(config::File::from(path.as_ref()).format(FileFormat::Toml))
@@ -38,6 +40,7 @@ impl Configuration {
     ///
     /// Will return `Err` if the the user's `XDG_CONFIG_HOME` is not set,
     /// the directory does not exist, or the file cannot be parsed.
+    #[instrument]
     pub fn load_xdg() -> Result<Self> {
         Self::load(
             ConfigurationDirectory::try_new()?
@@ -49,6 +52,7 @@ impl Configuration {
     /// # Errors
     ///
     /// Will return `Err` if fails to write to the configuration file.
+    #[instrument(skip(path), fields(path = ?path.as_ref()))]
     pub fn save(&self, path: impl AsRef<Path>) -> Result<PathBuf> {
         let path = path.as_ref();
 
@@ -75,6 +79,7 @@ impl Configuration {
     ///
     /// Will return `Err` if the the user's `XDG_CONFIG_HOME` is not set,
     /// the directory does not exist, or the file cannot be written.
+    #[instrument]
     pub fn save_xdg(&self) -> Result<PathBuf> {
         self.save(
             ConfigurationDirectory::try_new()?

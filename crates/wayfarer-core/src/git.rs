@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -7,11 +8,21 @@ pub mod error;
 use error::Result;
 use tracing::instrument;
 
+use crate::git::error::GitError as Error;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRepo(PathBuf);
 impl GitRepo {
-    const fn new(path: PathBuf) -> Self {
-        Self(path)
+    fn new(path: PathBuf) -> Result<Self> {
+        if !is_git_repo(&path)? {
+            return Err(Error::NotAGitRepo(path));
+        }
+        Ok(Self(path))
+    }
+}
+impl Display for GitRepo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.display().fmt(f)
     }
 }
 
@@ -36,8 +47,10 @@ pub fn git_repos(dir: impl AsRef<Path>) -> Result<Vec<GitRepo>> {
     let mut repos = Vec::new();
     for dir in fs::read_dir(dir.as_ref())? {
         let dir = dir?;
-        if is_git_repo(dir.path())? {
-            repos.push(GitRepo::new(dir.path()));
+        match GitRepo::new(dir.path()) {
+            Ok(repo) => repos.push(repo),
+            Err(Error::NotAGitRepo(_)) => {}
+            Err(e) => return Err(e),
         }
     }
     Ok(repos)
@@ -78,26 +91,33 @@ mod tests {
     #[test]
     fn returns_only_git_repos() -> Result<()> {
         let dir = tempdir()?;
+
         let a_path = dir.path().join("a");
+        fs::create_dir(&a_path)?;
         Command::new("git").arg("init").arg(&a_path).output()?;
 
         let b_path = dir.path().join("b");
+        fs::create_dir(&b_path)?;
         Command::new("git").arg("init").arg(&b_path).output()?;
 
         let c_path = dir.path().join("c");
+        fs::create_dir(&c_path)?;
         Command::new("git").arg("init").arg(&c_path).output()?;
 
-        fs::create_dir(dir.path().join("d"))?;
-        fs::create_dir(dir.path().join("e"))?;
+        let d_path = dir.path().join("d");
+        fs::create_dir(&d_path)?;
 
-        let mut repos = git_repos(dir)?;
+        let e_path = dir.path().join("e");
+        fs::create_dir(&e_path)?;
+
+        let mut repos = git_repos(dir.path())?;
         repos.sort();
 
         assert_eq!(
             vec![
-                GitRepo::new(a_path),
-                GitRepo::new(b_path),
-                GitRepo::new(c_path)
+                GitRepo::new(a_path)?,
+                GitRepo::new(b_path)?,
+                GitRepo::new(c_path)?,
             ],
             repos
         );

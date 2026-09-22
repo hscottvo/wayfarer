@@ -10,7 +10,9 @@ fn main() -> Result<()> {
     let config = Configuration::load_xdg()?;
     println!("{config:?}");
     let repos = git_repos(config.base_directory())?;
-    println!("{repos:?}");
+    for repo in &repos {
+        println!("{repo}");
+    }
     Ok(())
 }
 

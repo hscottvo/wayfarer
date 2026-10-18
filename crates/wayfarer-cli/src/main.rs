@@ -15,11 +15,6 @@ fn main() -> Result<()> {
     let config = Configuration::load_xdg()?;
 
     let runner = CommandRunner::new(config);
-    runner.run(*cli.command());
-
-    // let repos = git_repos(config.base_directory())?;
-    // for repo in &repos {
-    //     println!("{repo}");
-    // }
+    runner.run(*cli.command())?;
     Ok(())
 }

@@ -3,7 +3,7 @@ use config::{Config, FileFormat};
 use error::{ConfigurationError, Result};
 use serde::{Deserialize, Serialize};
 use std::{
-    fmt::Display,
+    fmt::{self, Display},
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -97,9 +97,8 @@ impl Configuration {
 
 impl Display for Configuration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let contents = toml::to_string_pretty(self)
-            .unwrap_or_else(|_| "Failed to print configuration".to_owned());
-        write!(f, "{contents}")
+        let config = toml::to_string_pretty(self).map_err(|_| fmt::Error)?;
+        f.write_str(&config)
     }
 }
 

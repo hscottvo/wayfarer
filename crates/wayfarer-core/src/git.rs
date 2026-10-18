@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::Write,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -13,19 +13,39 @@ use crate::git::error::GitError as Error;
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRepo {
     path: PathBuf,
+    branch: String,
 }
 impl GitRepo {
     fn new(path: PathBuf) -> Result<Self> {
         if !is_git_repo(&path)? {
             return Err(Error::NotAGitRepo(path));
         }
-        Ok(Self { path })
+        let branch = get_repo_branch(&path)?;
+        Ok(Self { path, branch })
+    }
+
+    /// # Errors
+    ///
+    /// Will return `Err` if unable to format
+    pub fn write_to(&self, f: &mut impl Write, spacing: usize) -> std::fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            self.path.display(),
+            " ".repeat(spacing),
+            self.branch
+        )
     }
 }
-impl Display for GitRepo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.path.display().fmt(f)
-    }
+
+fn get_repo_branch(dir: impl AsRef<Path>) -> Result<String> {
+    let x = Command::new("git")
+        .arg("-C")
+        .arg(dir.as_ref())
+        .arg("branch")
+        .arg("--show-current")
+        .output()?;
+    Ok(String::from_utf8(x.stdout)?.trim().to_owned())
 }
 
 fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
@@ -124,6 +144,25 @@ mod tests {
             repos
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn get_repo_branch_returns_branch() -> Result<()> {
+        let dir = tempdir()?;
+        let path = dir.path();
+
+        Command::new("git").arg("init").arg(path).output()?;
+        assert_eq!(get_repo_branch(path)?, "main");
+
+        Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .arg("switch")
+            .arg("-c")
+            .arg("test")
+            .output()?;
+        assert_eq!(get_repo_branch(path)?, "test");
         Ok(())
     }
 }

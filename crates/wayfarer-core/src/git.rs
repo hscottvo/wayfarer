@@ -11,18 +11,20 @@ use tracing::instrument;
 use crate::git::error::GitError as Error;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct GitRepo(PathBuf);
+pub struct GitRepo {
+    path: PathBuf,
+}
 impl GitRepo {
     fn new(path: PathBuf) -> Result<Self> {
         if !is_git_repo(&path)? {
             return Err(Error::NotAGitRepo(path));
         }
-        Ok(Self(path))
+        Ok(Self { path })
     }
 }
 impl Display for GitRepo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.display().fmt(f)
+        self.path.display().fmt(f)
     }
 }
 

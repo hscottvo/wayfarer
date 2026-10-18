@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::Parser;
+
+use crate::commands::Commands;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -10,13 +12,11 @@ pub struct Cli {
     config: Option<PathBuf>,
 
     #[command(subcommand)]
-    pub command: Commands,
+    command: Commands,
 }
 
-#[derive(Subcommand)]
-pub enum Commands {
-    /// Lists git repos in the configured base directory
-    List,
-    /// Prints loaded configuration
-    PrintConfiguration,
+impl Cli {
+    pub const fn command(&self) -> &Commands {
+        &self.command
+    }
 }

@@ -1,28 +1,31 @@
+mod cli;
+mod commands;
 mod util;
+use clap::Parser as _;
 use eyre::Result;
-use tracing::{info, instrument};
+use tracing::debug;
 use util::setup_env;
 use wayfarer_core::{config::Configuration, git::git_repos};
 
+use crate::{
+    cli::Cli,
+    commands::{Commands, print_configuration::print_configuration},
+};
+
 fn main() -> Result<()> {
     setup_env()?;
-    bar(5);
+    let cli = Cli::parse();
+
     let config = Configuration::load_xdg()?;
-    println!("{config:?}");
+
+    match cli.command() {
+        Commands::List => debug!("passed in command List"),
+        Commands::PrintConfiguration => print_configuration(&config),
+    }
+
     let repos = git_repos(config.base_directory())?;
     for repo in &repos {
         println!("{repo}");
     }
     Ok(())
-}
-
-#[instrument]
-fn foo(var: u32) {
-    info!("hello from foo");
-}
-
-#[instrument]
-fn bar(var: u32) {
-    info!("bar");
-    foo(var);
 }

@@ -15,7 +15,7 @@ impl CommandRunner {
 fn format_repos(repos: Vec<GitRepo>) -> Result<String> {
     let mut output = String::new();
     for repo in repos {
-        repo.write_to(&mut output, 10)?;
+        repo.write_to(&mut output, 3)?;
         writeln!(output)?;
     }
     Ok(output)

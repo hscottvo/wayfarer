@@ -5,15 +5,17 @@ use std::{
     process::Command,
 };
 pub mod error;
+mod remote;
 use error::Result;
 use tracing::instrument;
 
-use crate::git::error::GitError as Error;
+use crate::git::{error::GitError as Error, remote::GitRemote};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRepo {
     path: PathBuf,
     branch: String,
+    remote: Option<GitRemote>,
 }
 impl GitRepo {
     fn new(path: PathBuf) -> Result<Self> {
@@ -21,31 +23,49 @@ impl GitRepo {
             return Err(Error::NotAGitRepo(path));
         }
         let branch = get_repo_branch(&path)?;
-        Ok(Self { path, branch })
+        let remote = match GitRemote::from_path(&path) {
+            Ok(remote) => Some(remote),
+            Err(Error::NoRemote) => None,
+            Err(e) => return Err(e),
+        };
+        Ok(Self {
+            path,
+            branch,
+            remote,
+        })
     }
 
     /// # Errors
     ///
     /// Will return `Err` if unable to format
     pub fn write_to(&self, f: &mut impl Write, spacing: usize) -> std::fmt::Result {
+        let host = self.remote.as_ref().map_or("", GitRemote::host);
+        let owner = self.remote.as_ref().map_or("", GitRemote::owner);
+        let repo_name = self.remote.as_ref().map_or("", GitRemote::repo_name);
         write!(
             f,
-            "{}{}{}",
+            "{}{}{}{}{}{}{}{}{}",
+            repo_name,
+            " ".repeat(spacing),
+            self.branch,
+            " ".repeat(spacing),
+            owner,
+            " ".repeat(spacing),
             self.path.display(),
             " ".repeat(spacing),
-            self.branch
+            host,
         )
     }
 }
 
 fn get_repo_branch(dir: impl AsRef<Path>) -> Result<String> {
-    let x = Command::new("git")
+    let command_output = Command::new("git")
         .arg("-C")
         .arg(dir.as_ref())
         .arg("branch")
         .arg("--show-current")
         .output()?;
-    Ok(String::from_utf8(x.stdout)?.trim().to_owned())
+    Ok(String::from_utf8(command_output.stdout)?.trim().to_owned())
 }
 
 fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
@@ -163,6 +183,21 @@ mod tests {
             .arg("test")
             .output()?;
         assert_eq!(get_repo_branch(path)?, "test");
+        Ok(())
+    }
+
+    #[test]
+    fn bruh() -> Result<()> {
+        let dir = tempdir()?;
+        let path = dir.path();
+        Command::new("git").arg("init").arg(path).output()?;
+        Command::new("git")
+            .arg("-C")
+            .arg(path)
+            .arg("config")
+            .arg("--get")
+            .arg("remote.origin.url")
+            .output()?;
         Ok(())
     }
 }

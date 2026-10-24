@@ -222,7 +222,11 @@ mod tests {
         let dir = tempdir()?;
         let path = dir.path();
 
-        Command::new("git").arg("init").arg(path).output()?;
+        Command::new("git")
+            .arg("init")
+            .arg("--initial-branch=main")
+            .arg(path)
+            .output()?;
         assert_eq!(get_repo_branch(path)?, "main");
 
         Command::new("git")

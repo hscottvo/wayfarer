@@ -5,3 +5,5 @@ develop issue:
 test crate *args:
     cargo nextest run -p wayfarer-{{crate}} {{args}}
 
+build *args:
+    cargo build {{args}}

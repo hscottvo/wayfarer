@@ -14,6 +14,8 @@ pub enum GitError {
     RemoteParse,
     #[error("repo has no remote")]
     NoRemote,
+    #[error("failed to format git repo for display")]
+    Format,
 }
 
 pub type Result<T> = std::result::Result<T, GitError>;

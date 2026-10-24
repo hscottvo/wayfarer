@@ -41,7 +41,14 @@ impl GitRepo {
     pub fn write_to(&self, f: &mut impl Write, spacing: usize) -> std::fmt::Result {
         let host = self.remote.as_ref().map_or("", GitRemote::host);
         let owner = self.remote.as_ref().map_or("", GitRemote::owner);
-        let repo_name = self.remote.as_ref().map_or("", GitRemote::repo_name);
+        // let repo_name = self.remote.as_ref().map_or("", GitRemote::repo_name);
+        let repo_name = self
+            .path
+            .components()
+            .next_back()
+            .ok_or(std::fmt::Error)?
+            .as_os_str()
+            .to_string_lossy();
         write!(
             f,
             "{}{}{}{}{}{}{}{}{}",
@@ -55,6 +62,49 @@ impl GitRepo {
             " ".repeat(spacing),
             host,
         )
+    }
+
+    /// Gets the name of a git repo. Precedence is
+    /// 1. repo name on the remote
+    /// 2. name of the checkout's directory
+    /// # Errors
+    ///
+    /// Will return `Err` if repo name cannot be formatted to a &str.
+    pub fn name(&self) -> Result<&str> {
+        self.remote.as_ref().map_or_else(
+            || {
+                self.path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .ok_or(Error::Format)
+            },
+            |remote| Ok(remote.repo_name()),
+        )
+    }
+
+    #[must_use]
+    pub fn branch(&self) -> &str {
+        &self.branch
+    }
+
+    /// # Errors
+    ///
+    /// Will return `Err` if repo owner cannot be parsed to a &str.
+    pub fn owner(&self) -> Result<&str> {
+        self.remote
+            .as_ref()
+            .map(GitRemote::owner)
+            .ok_or(Error::Format)
+    }
+
+    /// # Errors
+    ///
+    /// Will return `Err` if host cannot be parsed into a &str.
+    pub fn host(&self) -> Result<&str> {
+        self.remote
+            .as_ref()
+            .map(GitRemote::host)
+            .ok_or(Error::Format)
     }
 }
 

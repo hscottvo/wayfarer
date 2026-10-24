@@ -1,7 +1,7 @@
 use crate::git::error::GitError;
 
 use super::Result;
-use std::{cmp::max_by, ops::Range, path::Path, process::Command};
+use std::{path::Path, process::Command};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct GitRemote {

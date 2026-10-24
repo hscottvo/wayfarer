@@ -3,14 +3,10 @@ mod commands;
 mod util;
 use clap::Parser as _;
 use eyre::Result;
-use tracing::debug;
 use util::setup_env;
-use wayfarer_core::{config::Configuration, git::git_repos};
+use wayfarer_core::config::Configuration;
 
-use crate::{
-    cli::Cli,
-    commands::{Commands, print_configuration::print_configuration},
-};
+use crate::{cli::Cli, commands::CommandRunner};
 
 fn main() -> Result<()> {
     setup_env()?;
@@ -18,14 +14,7 @@ fn main() -> Result<()> {
 
     let config = Configuration::load_xdg()?;
 
-    match cli.command() {
-        Commands::List => debug!("passed in command List"),
-        Commands::PrintConfiguration => print_configuration(&config),
-    }
-
-    let repos = git_repos(config.base_directory())?;
-    for repo in &repos {
-        println!("{repo}");
-    }
+    let runner = CommandRunner::new(config);
+    runner.run(*cli.command())?;
     Ok(())
 }

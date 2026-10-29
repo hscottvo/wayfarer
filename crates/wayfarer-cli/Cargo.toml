@@ -18,3 +18,7 @@ itertools = "0.15.0"
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "wayfarer"
+path = "src/main.rs"

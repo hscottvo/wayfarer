@@ -88,6 +88,12 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
         run: cargo nextest run --release --workspace --all-features
 
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: wayfarer
+          path: target/release/wayfarer
+
       - name: sccache stats
         if: steps.filter.outputs.rust == 'true'
         run: sccache --show-stats || true

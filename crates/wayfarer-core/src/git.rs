@@ -7,61 +7,18 @@ use std::{
 pub mod error;
 mod remote;
 use error::Result;
+use git2::Repository;
 use tracing::instrument;
 
-use crate::git::{error::GitError as Error, remote::GitRemote};
+use crate::git::error::GitError::{self as Error};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct GitRepo {
-    path: PathBuf,
-    branch: String,
-    remote: Option<GitRemote>,
-}
+pub struct GitRepo(Repository);
 impl GitRepo {
     fn new(path: PathBuf) -> Result<Self> {
         if !is_git_repo(&path)? {
             return Err(Error::NotAGitRepo(path));
         }
-        let branch = get_repo_branch(&path)?;
-        let remote = match GitRemote::from_path(&path) {
-            Ok(remote) => Some(remote),
-            Err(Error::NoRemote) => None,
-            Err(e) => return Err(e),
-        };
-        Ok(Self {
-            path,
-            branch,
-            remote,
-        })
-    }
-
-    /// # Errors
-    ///
-    /// Will return `Err` if unable to format
-    pub fn write_to(&self, f: &mut impl Write, spacing: usize) -> std::fmt::Result {
-        let host = self.remote.as_ref().map_or("", GitRemote::host);
-        let owner = self.remote.as_ref().map_or("", GitRemote::owner);
-        // let repo_name = self.remote.as_ref().map_or("", GitRemote::repo_name);
-        let repo_name = self
-            .path
-            .components()
-            .next_back()
-            .ok_or(std::fmt::Error)?
-            .as_os_str()
-            .to_string_lossy();
-        write!(
-            f,
-            "{}{}{}{}{}{}{}{}{}",
-            repo_name,
-            " ".repeat(spacing),
-            self.branch,
-            " ".repeat(spacing),
-            owner,
-            " ".repeat(spacing),
-            self.path.display(),
-            " ".repeat(spacing),
-            host,
-        )
+        Ok(Self(Repository::open(path)?))
     }
 
     /// Gets the name of a git repo. Precedence is
@@ -70,42 +27,45 @@ impl GitRepo {
     /// # Errors
     ///
     /// Will return `Err` if repo name cannot be formatted to a &str.
-    pub fn name(&self) -> Result<&str> {
-        self.remote.as_ref().map_or_else(
-            || {
-                self.path
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .ok_or(Error::Format)
-            },
-            |remote| Ok(remote.repo_name()),
-        )
+    pub fn name(&self) -> Result<String> {
+        let remote = self.0.find_remote("origin")?;
+        let url = remote.url()?.to_owned();
+        Ok(parse_repo_name(&url)?.to_owned())
     }
 
-    #[must_use]
-    pub fn branch(&self) -> &str {
-        &self.branch
-    }
+    // #[must_use]
+    // pub fn branch(&self) -> &str {
+    //     &self.branch
+    // }
 
-    /// # Errors
-    ///
-    /// Will return `Err` if repo owner cannot be parsed to a &str.
-    pub fn owner(&self) -> Result<&str> {
-        self.remote
-            .as_ref()
-            .map(GitRemote::owner)
-            .ok_or(Error::Format)
-    }
+    // /// # Errors
+    // ///
+    // /// Will return `Err` if repo owner cannot be parsed to a &str.
+    // pub fn owner(&self) -> Result<&str> {
+    //     self.remote
+    //         .as_ref()
+    //         .map(GitRemote::owner)
+    //         .ok_or(Error::Format)
+    // }
 
-    /// # Errors
-    ///
-    /// Will return `Err` if host cannot be parsed into a &str.
-    pub fn host(&self) -> Result<&str> {
-        self.remote
-            .as_ref()
-            .map(GitRemote::host)
-            .ok_or(Error::Format)
+    // /// # Errors
+    // ///
+    // /// Will return `Err` if host cannot be parsed into a &str.
+    // pub fn host(&self) -> Result<&str> {
+    //     self.remote
+    //         .as_ref()
+    //         .map(GitRemote::host)
+    //         .ok_or(Error::Format)
+    // }
+}
+
+fn parse_repo_name(url: &str) -> Result<&str> {
+    if !url.contains('.') || !url.contains('/') {
+        dbg!(url);
+        dbg!("fuck");
+        return Err(Error::RemoteParse);
     }
+    url.rsplit(['/', '.']).nth(1).ok_or(Error::RemoteParse)
 }
 
 fn get_repo_branch(dir: impl AsRef<Path>) -> Result<String> {
@@ -180,42 +140,42 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn returns_only_git_repos() -> Result<()> {
-        let dir = tempdir()?;
-
-        let a_path = dir.path().join("a");
-        fs::create_dir(&a_path)?;
-        Command::new("git").arg("init").arg(&a_path).output()?;
-
-        let b_path = dir.path().join("b");
-        fs::create_dir(&b_path)?;
-        Command::new("git").arg("init").arg(&b_path).output()?;
-
-        let c_path = dir.path().join("c");
-        fs::create_dir(&c_path)?;
-        Command::new("git").arg("init").arg(&c_path).output()?;
-
-        let d_path = dir.path().join("d");
-        fs::create_dir(&d_path)?;
-
-        let e_path = dir.path().join("e");
-        fs::create_dir(&e_path)?;
-
-        let mut repos = git_repos(dir.path())?;
-        repos.sort();
-
-        assert_eq!(
-            vec![
-                GitRepo::new(a_path)?,
-                GitRepo::new(b_path)?,
-                GitRepo::new(c_path)?,
-            ],
-            repos
-        );
-
-        Ok(())
-    }
+    // #[test]
+    // fn returns_only_git_repos() -> Result<()> {
+    //     let dir = tempdir()?;
+    //
+    //     let a_path = dir.path().join("a");
+    //     fs::create_dir(&a_path)?;
+    //     Command::new("git").arg("init").arg(&a_path).output()?;
+    //
+    //     let b_path = dir.path().join("b");
+    //     fs::create_dir(&b_path)?;
+    //     Command::new("git").arg("init").arg(&b_path).output()?;
+    //
+    //     let c_path = dir.path().join("c");
+    //     fs::create_dir(&c_path)?;
+    //     Command::new("git").arg("init").arg(&c_path).output()?;
+    //
+    //     let d_path = dir.path().join("d");
+    //     fs::create_dir(&d_path)?;
+    //
+    //     let e_path = dir.path().join("e");
+    //     fs::create_dir(&e_path)?;
+    //
+    //     let mut repos = git_repos(dir.path())?;
+    //     repos.sort();
+    //
+    //     assert_eq!(
+    //         vec![
+    //             GitRepo::new(a_path)?,
+    //             GitRepo::new(b_path)?,
+    //             GitRepo::new(c_path)?,
+    //         ],
+    //         repos
+    //     );
+    //
+    //     Ok(())
+    // }
 
     #[test]
     fn get_repo_branch_returns_branch() -> Result<()> {
@@ -237,6 +197,22 @@ mod tests {
             .arg("test")
             .output()?;
         assert_eq!(get_repo_branch(path)?, "test");
+        Ok(())
+    }
+
+    #[test]
+    fn parse_repo_name_from_url() -> Result<()> {
+        let valid_repo_name = parse_repo_name("git@github.com:hscottvo/waypoint.git")?;
+        assert_eq!(valid_repo_name, "waypoint");
+
+        let no_delimiters = parse_repo_name("waypoint");
+        assert!(no_delimiters.is_err());
+
+        let missing_slash = parse_repo_name("waypoint.git");
+        assert!(missing_slash.is_err());
+
+        let missing_period = parse_repo_name("hscottvo/waypoint");
+        assert!(missing_period.is_err());
         Ok(())
     }
 

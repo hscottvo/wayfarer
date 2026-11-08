@@ -1,5 +1,6 @@
 use std::{io, path::PathBuf, string};
 
+use git2::Error;
 use thiserror::Error;
 #[non_exhaustive]
 #[derive(Error, Debug)]
@@ -16,6 +17,8 @@ pub enum GitError {
     NoRemote,
     #[error("failed to format git repo for display")]
     Format,
+    #[error(transparent)]
+    Git(#[from] Error),
 }
 
 pub type Result<T> = std::result::Result<T, GitError>;

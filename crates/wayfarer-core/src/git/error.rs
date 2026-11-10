@@ -19,6 +19,8 @@ pub enum GitError {
     Format,
     #[error(transparent)]
     Git(#[from] Error),
+    #[error("head is detached")]
+    DetachedHead,
 }
 
 pub type Result<T> = std::result::Result<T, GitError>;

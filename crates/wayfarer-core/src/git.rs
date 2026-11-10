@@ -1,11 +1,9 @@
 use std::{
-    fmt::Write,
     fs,
     path::{Path, PathBuf},
     process::Command,
 };
 pub mod error;
-mod remote;
 use error::Result;
 use git2::Repository;
 use tracing::instrument;
@@ -33,10 +31,19 @@ impl GitRepo {
         Ok(parse_repo_name(&url)?.to_owned())
     }
 
-    // #[must_use]
-    // pub fn branch(&self) -> &str {
-    //     &self.branch
-    // }
+    /// Gets the branch of a git repo.
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if head cannot be found or head is detached.
+    pub fn branch(&self) -> Result<String> {
+        let head = self.0.head()?;
+        if head.is_branch() {
+            Ok(head.shorthand()?.to_owned())
+        } else {
+            Err(Error::DetachedHead)
+        }
+    }
 
     // /// # Errors
     // ///
@@ -66,16 +73,6 @@ fn parse_repo_name(url: &str) -> Result<&str> {
         return Err(Error::RemoteParse);
     }
     url.rsplit(['/', '.']).nth(1).ok_or(Error::RemoteParse)
-}
-
-fn get_repo_branch(dir: impl AsRef<Path>) -> Result<String> {
-    let command_output = Command::new("git")
-        .arg("-C")
-        .arg(dir.as_ref())
-        .arg("branch")
-        .arg("--show-current")
-        .output()?;
-    Ok(String::from_utf8(command_output.stdout)?.trim().to_owned())
 }
 
 fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
@@ -176,29 +173,6 @@ mod tests {
     //
     //     Ok(())
     // }
-
-    #[test]
-    fn get_repo_branch_returns_branch() -> Result<()> {
-        let dir = tempdir()?;
-        let path = dir.path();
-
-        Command::new("git")
-            .arg("init")
-            .arg("--initial-branch=main")
-            .arg(path)
-            .output()?;
-        assert_eq!(get_repo_branch(path)?, "main");
-
-        Command::new("git")
-            .arg("-C")
-            .arg(path)
-            .arg("switch")
-            .arg("-c")
-            .arg("test")
-            .output()?;
-        assert_eq!(get_repo_branch(path)?, "test");
-        Ok(())
-    }
 
     #[test]
     fn parse_repo_name_from_url() -> Result<()> {

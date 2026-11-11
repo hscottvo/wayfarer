@@ -1,7 +1,6 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    process::Command,
 };
 pub mod error;
 use error::Result;
@@ -13,9 +12,6 @@ use crate::git::error::GitError::{self as Error};
 pub struct GitRepo(Repository);
 impl GitRepo {
     fn new(path: PathBuf) -> Result<Self> {
-        if !is_git_repo(&path)? {
-            return Err(Error::NotAGitRepo(path));
-        }
         Ok(Self(Repository::open(path)?))
     }
 
@@ -79,18 +75,6 @@ fn parse_repo_owner(url: &str) -> Result<&str> {
     url.rsplit(['/', ':']).nth(1).ok_or(Error::RemoteParse)
 }
 
-fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
-    let ret = Command::new("git")
-        .arg("-C")
-        .arg(dir.as_ref())
-        .arg("rev-parse")
-        .arg("--git-dir")
-        .output()?
-        .status
-        .success();
-    Ok(ret)
-}
-
 /// # Errors
 ///
 /// Will return `Err` if rust is unable to read the directory or spawn the child `git` process
@@ -111,7 +95,7 @@ pub fn git_repos(dir: impl AsRef<Path>) -> Result<Vec<GitRepo>> {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{fs, process::Command};
 
     use eyre::Result;
     use tempfile::tempdir;
@@ -119,17 +103,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn returns_true_for_git_dir() -> Result<()> {
+    fn valid_gitrepo() -> Result<()> {
         let dir = tempdir()?;
         Command::new("git").arg("init").arg(dir.path()).output()?;
-        assert!(is_git_repo(dir)?);
+        assert!(GitRepo::new(dir.path().to_path_buf()).is_ok());
         Ok(())
     }
 
     #[test]
-    fn returns_false_for_empty_dir() -> Result<()> {
+    fn non_existent_repo() -> Result<()> {
         let dir = tempdir()?;
-        assert!(!is_git_repo(dir)?);
+        assert!(GitRepo::new(dir.path().to_path_buf()).is_err());
         Ok(())
     }
 
@@ -137,7 +121,7 @@ mod tests {
     fn returns_false_for_fake_git_dir() -> Result<()> {
         let dir = tempdir()?;
         fs::create_dir(dir.path().join(".git"))?;
-        assert!(!is_git_repo(dir)?);
+        assert!(GitRepo::new(dir.path().to_path_buf()).is_err());
         Ok(())
     }
 

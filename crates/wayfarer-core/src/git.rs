@@ -45,15 +45,14 @@ impl GitRepo {
         }
     }
 
-    // /// # Errors
-    // ///
-    // /// Will return `Err` if repo owner cannot be parsed to a &str.
-    // pub fn owner(&self) -> Result<&str> {
-    //     self.remote
-    //         .as_ref()
-    //         .map(GitRemote::owner)
-    //         .ok_or(Error::Format)
-    // }
+    /// # Errors
+    ///
+    /// Will return `Err` if repo owner cannot be parsed to a &str.
+    pub fn owner(&self) -> Result<String> {
+        let remote = self.0.find_remote("origin")?;
+        let url = remote.url()?.to_owned();
+        Ok(parse_repo_owner(&url)?.to_owned())
+    }
 
     // /// # Errors
     // ///
@@ -68,11 +67,16 @@ impl GitRepo {
 
 fn parse_repo_name(url: &str) -> Result<&str> {
     if !url.contains('.') || !url.contains('/') {
-        dbg!(url);
-        dbg!("fuck");
         return Err(Error::RemoteParse);
     }
     url.rsplit(['/', '.']).nth(1).ok_or(Error::RemoteParse)
+}
+
+fn parse_repo_owner(url: &str) -> Result<&str> {
+    if !url.contains(':') || !url.contains('/') {
+        return Err(Error::RemoteParse);
+    }
+    url.rsplit(['/', ':']).nth(1).ok_or(Error::RemoteParse)
 }
 
 fn is_git_repo(dir: impl AsRef<Path>) -> Result<bool> {
@@ -187,21 +191,6 @@ mod tests {
 
         let missing_period = parse_repo_name("hscottvo/waypoint");
         assert!(missing_period.is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn bruh() -> Result<()> {
-        let dir = tempdir()?;
-        let path = dir.path();
-        Command::new("git").arg("init").arg(path).output()?;
-        Command::new("git")
-            .arg("-C")
-            .arg(path)
-            .arg("config")
-            .arg("--get")
-            .arg("remote.origin.url")
-            .output()?;
         Ok(())
     }
 }
